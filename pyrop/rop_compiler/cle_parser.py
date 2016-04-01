@@ -3,7 +3,7 @@ import file_parser
 import cle
 
 class CleParser(file_parser.FileParser):
-  """This class parses an executable file using radare"""
+  """This class parses an executable file using cle"""
 
   def __init__(self, filename, base_address = 0, level = logging.WARNING):
     super(CleParser, self).__init__(filename, base_address, level)
@@ -25,7 +25,7 @@ class CleParser(file_parser.FileParser):
     if symbol != None:
       if symbol.rebased_addr == 0: # For some symbols, it doesn't look in the plt.  Fix that up here.
         return self.ld.main_bin._plt[name] + self.base_address
-      return symbol.rebased_addr + self.base_address
+      return symbol.addr + self.base_address
     return None
 
   def get_writable_memory(self):

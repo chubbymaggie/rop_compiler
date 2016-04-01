@@ -135,10 +135,13 @@ class GadgetClassifier(object):
         # Except for Jump, all the gadgets must load rip from the stack
         or ((ip_in_stack_offset == None and gadget_type != Jump) and not (ip_from_reg != None and gadget_type == LoadMem))
 
-        # If the stack doesn't get adjusted
-        or (ip_in_stack_offset != None and ((gadget_type == LoadMem and params[0] > stack_offset) or ip_in_stack_offset > stack_offset))
+        # If the ip is outside the stack portion for the gadget, ignore the gadget
+        or (ip_in_stack_offset != None and ip_in_stack_offset > stack_offset)
 
-        # We don't care about finding gadgets that set the flags
+        # If the gadget doesn't get adjusted properly for stack base LoadMem gadgets, ignore the gadget
+        or (gadget_type == LoadMem and inputs[0] == self.sp and params[0] + (self.arch.bits/8) > stack_offset)
+
+        # We don't care about finding gadgets that only set the flags
         or (len(outputs) != 0 and all(map(self.is_ignored_register, outputs)))
 
         # If it's a LoadMem that results in a jmp to the load register, thus we can't actually load any value we want
@@ -355,7 +358,7 @@ class PyvexEvaluator(object):
             getattr(self, stmt.tag)(stmt)
           else:
             self.unknown_statement(stmt)
-        except:
+        except Exception, e:
           return False
     return True
 
@@ -382,9 +385,15 @@ class PyvexEvaluator(object):
 
   def unknown_statement(self, stmt):
     """Raises a RuntimeError. Used to signify that the current statement is one we don't know how to emulate"""
-    raise RuntimeError("Unknown statement: {}".format(stmt.tag))
+    err_msg = "Unknown statement: {}".format(stmt.tag)
+    raise RuntimeError(err_msg)
 
   # Expression Emulators
+
+  def Iex_CCall(self, expr):
+    # TODO we don't really deal with the flags, and I've only seen this used for x86 flags, so I'm just going to ignore this for now.
+    # Perhaps, at some point in the future I'll implement this
+    return 0
 
   def Iex_Get(self, expr):
     return self.state.get_reg(expr.offset, expr.result_size)
